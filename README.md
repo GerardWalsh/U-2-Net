@@ -27,15 +27,13 @@ __Contact__: xuebin[at]ualberta[dot]ca
 
 ## Our previous work: [BASNet (CVPR 2019)](https://github.com/NathanUA/BASNet)
 
-## Required libraries
-
-Python 3.6  
-numpy 1.15.2  
-scikit-image 0.14.0  
-PIL 5.2.0  
-PyTorch 0.4.0  
-torchvision 0.2.1  
-glob  
+## Tested library (pip installed) versions
+* Ubuntu 18.04
+* CUDA 10.0
+* Python 3.7  
+* PyTorch 1.6
+* torchvision 0.7
+* scikit-image 0.17.2
 
 ## Usage
 1. Clone this repo
