@@ -1,4 +1,6 @@
 import os
+import time
+
 from skimage import io, transform
 import torch
 import torchvision
@@ -58,7 +60,7 @@ def main():
     model_dir = os.path.join(os.getcwd(), 'saved_models', model_name, model_name + '.pth')
 
     img_name_list = glob.glob(image_dir + os.sep + '*')
-    print(img_name_list)
+    # print(img_name_list)
 
     # --------- 2. dataloader ---------
     #1. dataloader
@@ -88,20 +90,22 @@ def main():
 
     net.eval()
 
+    inference_time = 0.0
     # --------- 4. inference for each image ---------
     for i_test, data_test in enumerate(test_salobj_dataloader):
 
-        print("inferencing:",img_name_list[i_test].split(os.sep)[-1])
+        # print("inferencing:",img_name_list[i_test].split(os.sep)[-1])
 
         inputs_test = data_test['image']
         inputs_test = inputs_test.type(torch.FloatTensor)
 
         if torch.cuda.is_available():
-            inputs_test = Variable(inputs_test.cuda())
-        else:
-            inputs_test = Variable(inputs_test)
+            inputs_test = inputs_test.cuda()
 
-        d1,d2,d3,d4,d5,d6,d7= net(inputs_test)
+        start = time.time()
+        with torch.no_grad():
+            d1,d2,d3,d4,d5,d6,d7= net(inputs_test)
+        inference_time += (time.time() - start)
 
         # normalization
         pred = d1[:,0,:,:]
@@ -114,5 +118,8 @@ def main():
 
         del d1,d2,d3,d4,d5,d6,d7
 
+    print(
+            f"Predicted {len(img_name_list)} images in {inference_time:.2f}s"
+    )
 if __name__ == "__main__":
     main()

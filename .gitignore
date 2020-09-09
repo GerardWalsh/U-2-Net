@@ -2,6 +2,7 @@
 *.png
 *.jpg
 *.jpeg
+test_data/
 
 # Python files
 *.pyc
