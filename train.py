@@ -29,7 +29,6 @@ from model import U2NETP
 bce_loss = nn.BCELoss(size_average=True)
 writer = SummaryWriter('runs/U2net')
 
-
 def muti_bce_loss_fusion(d0, d1, d2, d3, d4, d5, d6, labels_v):
 
 	loss0 = bce_loss(d0,labels_v)
@@ -51,11 +50,11 @@ def main():
     model_name = 'u2netp' #'u2netp'
 
     data_dir = os.path.join(os.getcwd(), 'train_data' + os.sep)
-    tra_image_dir = os.path.join('DUTS', 'DUTS-TR', 'im_aug' + os.sep)
-    tra_label_dir = os.path.join('DUTS', 'DUTS-TR', 'gt_aug' + os.sep)
+    tra_image_dir = os.path.join('DUTS', 'DUTS-TR', 'dat' + os.sep)
+    tra_label_dir = os.path.join('DUTS', 'DUTS-TR', 'datl' + os.sep)
 
-    image_ext = '.jpg'
-    label_ext = '.png'
+    image_ext = '.npy'
+    label_ext = '.npy'
 
     model_dir = os.path.join(os.getcwd(), 'saved_models', model_name + os.sep)
 
@@ -92,7 +91,7 @@ def main():
         transform=transforms.Compose([
             RescaleT(320),
             RandomCrop(288),
-            ToTensorLab(flag=0)]))
+            ToTensorLab(flag=3)]))
 
     salobj_dataloader = DataLoader(salobj_dataset, batch_size=batch_size_train, shuffle=True, num_workers=1)
 
@@ -101,7 +100,7 @@ def main():
     if(model_name=='u2net'):
         net = U2NET(3, 1)
     elif(model_name=='u2netp'):
-        net = U2NETP(3,1)
+        net = U2NETP(4,1)
 
     if torch.cuda.is_available():
         net.cuda()
@@ -157,7 +156,7 @@ def main():
             running_loss += loss.item()
             running_tar_loss += loss2.item()
             
-            if i % 50 == 0:    # every 50 mini-batches...
+            if i % 5 == 0:    # every 50 mini-batches...
                 print("LOggin to TeNsOrBOARDs\n\n")
                 # ...log the running loss
                 writer.add_scalar('training loss',

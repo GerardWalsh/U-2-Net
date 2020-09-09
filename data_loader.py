@@ -133,6 +133,19 @@ class ToTensorLab(object):
 			tmpImg[:,:,0] = (tmpImg[:,:,0]-np.mean(tmpImg[:,:,0]))/np.std(tmpImg[:,:,0])
 			tmpImg[:,:,1] = (tmpImg[:,:,1]-np.mean(tmpImg[:,:,1]))/np.std(tmpImg[:,:,1])
 			tmpImg[:,:,2] = (tmpImg[:,:,2]-np.mean(tmpImg[:,:,2]))/np.std(tmpImg[:,:,2])
+		elif self.flag == 3: # input depth = 4
+			tmpImg = np.zeros((image.shape[0],image.shape[1], 4))
+			image = image/np.max(image)
+			if image.shape[2]==1:
+				tmpImg[:,:,0] = (image[:,:,0]-0.485)/0.229
+				tmpImg[:,:,1] = (image[:,:,0]-0.485)/0.229
+				tmpImg[:,:,2] = (image[:,:,0]-0.485)/0.229
+				tmpImg[:,:,3] = (image[:,:,0]-0.485)/0.229
+			else:
+				tmpImg[:,:,0] = (image[:,:,0]-0.485)/0.229
+				tmpImg[:,:,1] = (image[:,:,1]-0.456)/0.224
+				tmpImg[:,:,2] = (image[:,:,2]-0.406)/0.225
+				tmpImg[:,:,3] = (image[:,:,3]-0.485)/0.229
 
 		else: # with rgb color
 			tmpImg = np.zeros((image.shape[0],image.shape[1],3))
@@ -153,7 +166,7 @@ class ToTensorLab(object):
 		tmpImg = tmpImg.transpose((2, 0, 1))
 		tmpLbl = label.transpose((2, 0, 1))
 
-		return {'imidx':torch.from_numpy(imidx), 'image': torch.from_numpy(tmpImg), 'label': torch.from_numpy(tmpLbl)}
+		return {'imidx':torch.from_numpy(imidx), 'image': torch.from_numpy(tmpImg.copy()), 'label': torch.from_numpy(tmpLbl.copy())}
 
 
 class SalObjDataset(Dataset):
@@ -172,15 +185,16 @@ class SalObjDataset(Dataset):
 
 		# image = Image.open(self.image_name_list[idx])#io.imread(self.image_name_list[idx])
 		# label = Image.open(self.label_name_list[idx])#io.imread(self.label_name_list[idx])
-
-		image = io.imread(self.image_name_list[idx])
+		
+		# image = io.imread(self.image_name_list[idx])
+		image = np.load(self.image_name_list[idx])
 		imname = self.image_name_list[idx]
 		imidx = np.array([idx])
 
 		if(0==len(self.label_name_list)):
 			label_3 = np.zeros(image.shape)
 		else:
-			label_3 = io.imread(self.label_name_list[idx])
+			label_3 = np.load(self.label_name_list[idx])
 
 		label = np.zeros(label_3.shape[0:2])
 		if(3==len(label_3.shape)):
