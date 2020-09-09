@@ -53,7 +53,7 @@ def save_output(image_name,pred,d_dir):
 def main():
 
     # --------- 1. get image path and name ---------
-    model_name='u2net'#u2netp
+    model_name='u2netp'#u2netp
 
     image_dir = os.path.join(os.getcwd(), 'test_data', 'test_images')
     prediction_dir = os.path.join(os.getcwd(), 'test_data', model_name + '_results' + os.sep)
@@ -83,7 +83,7 @@ def main():
         net = U2NETP(3,1)
     
     if torch.cuda.is_available():
-        net.load_state_dict(torch.load(model_dir))
+        net.load_state_dict(torch.load("saved_models/u2netp/u2netp_bce_itr_10000_train_1.384799_tar_0.185377.pth"))
         net.cuda()
     else:
         net.load_state_dict(torch.load(model_dir, map_location=torch.device("cpu")))

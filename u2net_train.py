@@ -1,31 +1,34 @@
-import torch
-import torchvision
-from torch.autograd import Variable
-import torch.nn as nn
-import torch.nn.functional as F
-
-from torch.utils.data import Dataset, DataLoader
-from torchvision import transforms, utils
-import torch.optim as optim
-import torchvision.transforms as standard_transforms
-
-import numpy as np
 import glob
 import os
 
-from data_loader import Rescale
+import torch
+from torchvision.utils import make_grid
+from torch.autograd import Variable
+import torch.nn as nn
+import torch.nn.functional as F
+from torch.utils.data import Dataset, DataLoader
+from torch.utils.tensorboard import SummaryWriter
+import torch.optim as optim
+from torchvision import transforms, utils
+import torchvision.transforms as standard_transforms
+
+import numpy as np
+import matplotlib
+
+from utils import matplotlib_imshow
+
 from data_loader import RescaleT
 from data_loader import RandomCrop
-from data_loader import ToTensor
 from data_loader import ToTensorLab
 from data_loader import SalObjDataset
-
 from model import U2NET
 from model import U2NETP
 
-# ------- 1. define loss function --------
+# ------- 1. define loss function & logging--------
 
 bce_loss = nn.BCELoss(size_average=True)
+writer = SummaryWriter('runs/U2net')
+
 
 def muti_bce_loss_fusion(d0, d1, d2, d3, d4, d5, d6, labels_v):
 
@@ -38,18 +41,18 @@ def muti_bce_loss_fusion(d0, d1, d2, d3, d4, d5, d6, labels_v):
 	loss6 = bce_loss(d6,labels_v)
 
 	loss = loss0 + loss1 + loss2 + loss3 + loss4 + loss5 + loss6
-	print("l0: %3f, l1: %3f, l2: %3f, l3: %3f, l4: %3f, l5: %3f, l6: %3f\n"%(loss0.data[0],loss1.data[0],loss2.data[0],loss3.data[0],loss4.data[0],loss5.data[0],loss6.data[0]))
+	# print("l0: %3f, l1: %3f, l2: %3f, l3: %3f, l4: %3f, l5: %3f, l6: %3f\n"%(loss0.item(),loss1.item(),loss2.item(),loss3.item(),loss4.item(),loss5.item(),loss6.item()))
 
 	return loss0, loss
 
 def main():
     # ------- 2. set the directory of training dataset --------
 
-    model_name = 'u2net' #'u2netp'
+    model_name = 'u2netp' #'u2netp'
 
     data_dir = os.path.join(os.getcwd(), 'train_data' + os.sep)
-    tra_image_dir = os.path.join('DUTS', 'DUTS-TR', 'DUTS-TR', 'im_aug' + os.sep)
-    tra_label_dir = os.path.join('DUTS', 'DUTS-TR', 'DUTS-TR', 'gt_aug' + os.sep)
+    tra_image_dir = os.path.join('DUTS', 'DUTS-TR', 'im_aug' + os.sep)
+    tra_label_dir = os.path.join('DUTS', 'DUTS-TR', 'gt_aug' + os.sep)
 
     image_ext = '.jpg'
     label_ext = '.png'
@@ -57,7 +60,7 @@ def main():
     model_dir = os.path.join(os.getcwd(), 'saved_models', model_name + os.sep)
 
     epoch_num = 100000
-    batch_size_train = 12
+    batch_size_train = 8
     batch_size_val = 1
     train_num = 0
     val_num = 0
@@ -90,6 +93,7 @@ def main():
             RescaleT(320),
             RandomCrop(288),
             ToTensorLab(flag=0)]))
+
     salobj_dataloader = DataLoader(salobj_dataset, batch_size=batch_size_train, shuffle=True, num_workers=1)
 
     # ------- 3. define model --------
@@ -118,10 +122,16 @@ def main():
         net.train()
 
         for i, data in enumerate(salobj_dataloader):
+            print("I:", i)
             ite_num = ite_num + 1
             ite_num4val = ite_num4val + 1
 
             inputs, labels = data['image'], data['label']
+
+            # Training monitoring
+            # img_grid = make_grid(inputs) # these are not random
+            # matplotlib_imshow(img_grid, one_channel=True)
+            # writer.add_image('four_training', img_grid)
 
             inputs = inputs.type(torch.FloatTensor)
             labels = labels.type(torch.FloatTensor)
@@ -144,18 +154,41 @@ def main():
             optimizer.step()
 
             # # print statistics
-            running_loss += loss.data[0]
-            running_tar_loss += loss2.data[0]
+            running_loss += loss.item()
+            running_tar_loss += loss2.item()
+            
+            if i % 50 == 0:    # every 50 mini-batches...
+                print("LOggin to TeNsOrBOARDs\n\n")
+                # ...log the running loss
+                writer.add_scalar('training loss',
+                                running_loss / ite_num4val,
+                                epoch * len(salobj_dataloader) + i)
+
+                writer.add_scalar('tar loss',
+                                running_tar_loss / ite_num4val,
+                                epoch * len(salobj_dataloader) + i)
 
             # del temporary outputs and loss
             del d0, d1, d2, d3, d4, d5, d6, loss2, loss
 
-            print("[epoch: %3d/%3d, batch: %5d/%5d, ite: %d] train loss: %3f, tar: %3f " % (
-            epoch + 1, epoch_num, (i + 1) * batch_size_train, train_num, ite_num, running_loss / ite_num4val, running_tar_loss / ite_num4val))
+            print("[epoch: %3d/%3d, batch: %5d/%5d, ite: %d] train loss: %3f, tar: %3f " % 
+            (
+                epoch + 1,
+                epoch_num,
+                (i + 1) * batch_size_train,
+                train_num,
+                ite_num,
+                running_loss / ite_num4val,
+                running_tar_loss / ite_num4val
+                )
+            )
 
             if ite_num % save_frq == 0:
 
-                torch.save(net.state_dict(), model_dir + model_name+"_bce_itr_%d_train_%3f_tar_%3f.pth" % (ite_num, running_loss / ite_num4val, running_tar_loss / ite_num4val))
+                torch.save(net.state_dict(), model_dir + model_name+"_bce_itr_%d_train_%3f_tar_%3f.pth" % 
+                (ite_num, running_loss / ite_num4val, running_tar_loss / ite_num4val)
+                )
+                
                 running_loss = 0.0
                 running_tar_loss = 0.0
                 net.train()  # resume train
