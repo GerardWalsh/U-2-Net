@@ -1,0 +1,12 @@
+# image files
+*.png
+*.jpg
+*.jpeg
+
+# Python files
+*.pyc
+*pycache*
+venv/
+
+# Models
+saved_models/
