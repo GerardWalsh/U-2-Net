@@ -166,6 +166,8 @@ class ToTensorLab(object):
 		tmpImg = tmpImg.transpose((2, 0, 1))
 		tmpLbl = label.transpose((2, 0, 1))
 
+		# print("temp image shape", tmpImg.shape)
+
 		return {'imidx':torch.from_numpy(imidx), 'image': torch.from_numpy(tmpImg.copy()), 'label': torch.from_numpy(tmpLbl.copy())}
 
 

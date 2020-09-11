@@ -1,5 +1,6 @@
 import os
 import time
+import glob
 
 from skimage import io, transform
 import torch
@@ -13,7 +14,7 @@ from torchvision import transforms#, utils
 
 import numpy as np
 from PIL import Image
-import glob
+import cv2
 
 from data_loader import RescaleT
 from data_loader import ToTensorLab
@@ -39,7 +40,9 @@ def save_output(image_name,pred,d_dir):
 
     im = Image.fromarray(predict_np*255).convert('RGB')
     img_name = image_name.split(os.sep)[-1]
-    image = io.imread(image_name)
+    # image = io.imread(image_name)
+    image = np.load(image_name)[:,:,0:3]
+
     imo = im.resize((image.shape[1],image.shape[0]),resample=Image.BILINEAR)
 
     aaa = img_name.split(".")
@@ -60,14 +63,14 @@ def main():
     model_dir = os.path.join(os.getcwd(), 'saved_models', model_name, model_name + '.pth')
 
     img_name_list = glob.glob(image_dir + os.sep + '*')
-    # print(img_name_list)
+    print(img_name_list)
 
     # --------- 2. dataloader ---------
     #1. dataloader
     test_salobj_dataset = SalObjDataset(img_name_list = img_name_list,
                                         lbl_name_list = [],
                                         transform=transforms.Compose([RescaleT(320),
-                                                                      ToTensorLab(flag=0)])
+                                                                      ToTensorLab(flag=3)])
                                         )
     test_salobj_dataloader = DataLoader(test_salobj_dataset,
                                         batch_size=1,
@@ -77,13 +80,15 @@ def main():
     # --------- 3. model define ---------
     if(model_name=='u2net'):
         print("...load U2NET---173.6 MB")
-        net = U2NET(3,1)
+        # net = U2NET(3,1)
     elif(model_name=='u2netp'):
         print("...load U2NEP---4.7 MB")
-        net = U2NETP(3,1)
+        net = U2NETP(4,1)
     
     if torch.cuda.is_available():
-        net.load_state_dict(torch.load("saved_models/u2netp/u2netp_bce_itr_10000_train_1.384799_tar_0.185377.pth"))
+        # net.load_state_dict(torch.load("/home/gexegetic/U-2-Net/saved_models/u2netp/u2netp_bce_itr_63250_train_1.096676_tar_0.138501.pth"))
+        # net.load_state_dict(torch.load("/home/gexegetic/U-2-Net/saved_models/u2netp/u2netp_bce_itr_21250_train_1.183620_tar_0.155654.pth"))
+        net.load_state_dict(torch.load("/home/gexegetic/U-2-Net/saved_models/u2netp/u2netp_bce_itr_16700_train_1.194110_tar_0.158093.pth"))
         net.cuda()
     else:
         net.load_state_dict(torch.load(model_dir, map_location=torch.device("cpu")))
@@ -98,6 +103,8 @@ def main():
 
         inputs_test = data_test['image']
         inputs_test = inputs_test.type(torch.FloatTensor)
+
+        # print("\n\n Shpae", inputs_test.shape)
 
         if torch.cuda.is_available():
             inputs_test = inputs_test.cuda()
